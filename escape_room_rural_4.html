@@ -1,0 +1,1960 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escape Room Digital - La Casa Rural Misteriosa</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Creepster&family=Roboto:wght@300;400;700&display=swap');
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f0f2f5;
+        }
+        
+        .title-font {
+            font-family: 'Creepster', cursive;
+        }
+        
+        .game-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .puzzle-item {
+            transition: all 0.3s ease;
+        }
+        
+        .puzzle-item:hover {
+            transform: scale(1.05);
+        }
+        
+        .lock-animation {
+            animation: wiggle 0.5s ease;
+        }
+        
+        @keyframes wiggle {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-5deg); }
+            75% { transform: rotate(5deg); }
+        }
+        
+        .timer-warning {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .puzzle-piece {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .puzzle-piece:hover {
+            transform: scale(1.05);
+        }
+        
+        .draggable {
+            cursor: move;
+        }
+        
+        .hint-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: red;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .code-digit {
+            width: 40px;
+            height: 50px;
+            font-size: 24px;
+            text-align: center;
+            margin: 0 5px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+        }
+        
+        .hidden-clue {
+            position: relative;
+            background-color: #000;
+            color: #000;
+            user-select: none;
+            cursor: pointer;
+        }
+        
+        .revealed {
+            background-color: transparent;
+            color: inherit;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        /* Audio player styling */
+        .audio-player {
+            width: 100%;
+            max-width: 300px;
+            margin: 10px auto;
+        }
+        
+        .progress-container {
+            height: 5px;
+            background-color: #ddd;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            cursor: pointer;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background-color: #4CAF50;
+            border-radius: 5px;
+            width: 0%;
+        }
+        
+        .morse-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #333;
+            margin: 0 2px;
+        }
+        
+        .morse-dash {
+            display: inline-block;
+            width: 20px;
+            height: 10px;
+            background-color: #333;
+            margin: 0 2px;
+        }
+        
+        .morse-space {
+            display: inline-block;
+            width: 15px;
+            margin: 0 2px;
+        }
+        
+        .cipher-table td {
+            width: 30px;
+            height: 30px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div id="app" class="min-h-screen">
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="fixed inset-0 bg-black z-50 flex flex-col items-center justify-center text-white">
+            <h1 class="title-font text-5xl mb-8 text-red-600">La Casa Rural Misteriosa</h1>
+            <div class="w-64 h-2 bg-gray-800 rounded-full">
+                <div id="loading-bar" class="h-full bg-red-600 rounded-full" style="width: 0%"></div>
+            </div>
+            <p id="loading-text" class="mt-4 text-xl">Cargando el misterio...</p>
+        </div>
+
+        <!-- Login / Welcome Screen -->
+        <div id="login-screen" class="min-h-screen hidden flex flex-col items-center justify-center p-4">
+            <div class="max-w-md w-full bg-white rounded-lg shadow-lg overflow-hidden">
+                <div class="p-4 bg-red-800 text-white">
+                    <h2 class="title-font text-3xl text-center">La Casa Rural Misteriosa</h2>
+                    <p class="text-center text-sm mt-2">Escape Room Digital</p>
+                </div>
+                <div class="p-6">
+                    <div class="mb-6 text-center">
+                        <p class="text-gray-700">Bienvenidos a la experiencia de escape room digital. Elige tu rol para comenzar.</p>
+                    </div>
+                    
+                    <div class="flex flex-col space-y-4">
+                        <button id="player-btn" class="bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-users mr-2"></i> Soy Jugador
+                        </button>
+                        
+                        <button id="admin-btn" class="bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-user-cog mr-2"></i> Soy Administrador
+                        </button>
+                    </div>
+                    
+                    <div id="admin-login" class="mt-6 hidden">
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2" for="password">
+                                Contraseña de Administrador
+                            </label>
+                            <input id="admin-password" type="password" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Introduce la contraseña">
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <button id="admin-login-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                                Acceder
+                            </button>
+                            <button id="admin-cancel-btn" class="text-gray-500 hover:text-gray-700">
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="player-login" class="mt-6 hidden">
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2" for="game-code">
+                                Código de juego
+                            </label>
+                            <input id="game-code" type="text" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Introduce el código del juego">
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2" for="team-name">
+                                Nombre del equipo
+                            </label>
+                            <input id="team-name" type="text" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Nombre de vuestro equipo">
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <button id="team-join-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                                Unirse al juego
+                            </button>
+                            <button id="player-cancel-btn" class="text-gray-500 hover:text-gray-700">
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Dashboard -->
+        <div id="admin-dashboard" class="hidden min-h-screen bg-gray-100">
+            <nav class="bg-red-800 text-white shadow-lg">
+                <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+                    <h1 class="title-font text-2xl">Panel de Administrador</h1>
+                    <div class="flex items-center">
+                        <span id="admin-game-timer" class="mr-4 px-3 py-1 rounded bg-red-900 text-white font-mono">
+                            00:00:00
+                        </span>
+                        <button id="admin-logout-btn" class="bg-red-700 hover:bg-red-600 text-white px-4 py-2 rounded-lg">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </nav>
+            
+            <div class="container mx-auto p-4">
+                <!-- Game setup section (visible before game starts) -->
+                <div id="game-setup" class="mb-8 bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-2xl font-bold mb-4 text-gray-800">Configuración del Juego</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <h3 class="text-lg font-semibold mb-3 text-gray-700">Equipos</h3>
+                            <div id="teams-config" class="space-y-3">
+                                <div class="flex items-center">
+                                    <input type="text" placeholder="Nombre del equipo 1" class="team-name-input flex-grow p-2 border rounded mr-2">
+                                    <button class="remove-team text-red-500 hover:text-red-700">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="text" placeholder="Nombre del equipo 2" class="team-name-input flex-grow p-2 border rounded mr-2">
+                                    <button class="remove-team text-red-500 hover:text-red-700">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button id="add-team-btn" class="mt-3 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                                <i class="fas fa-plus mr-2"></i> Añadir equipo
+                            </button>
+                        </div>
+                        
+                        <div>
+                            <h3 class="text-lg font-semibold mb-3 text-gray-700">Tiempo de juego</h3>
+                            <div class="flex items-center space-x-4">
+                                <select id="game-duration" class="p-2 border rounded">
+                                    <option value="3600">60 minutos</option>
+                                    <option value="4500">75 minutos</option>
+                                    <option value="5400" selected>90 minutos</option>
+                                </select>
+                                
+                                <div class="flex flex-col">
+                                    <span class="text-sm text-gray-600">Código del juego:</span>
+                                    <span id="game-code-display" class="font-mono text-lg font-bold">XXXX</span>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-6">
+                                <button id="start-game-btn" class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-bold">
+                                    <i class="fas fa-play mr-2"></i> Iniciar Juego
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Teams progress section (visible after game starts) -->
+                <div id="teams-progress" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Team cards will be generated here -->
+                </div>
+                
+                <!-- Game controls section (visible after game starts) -->
+                <div id="game-controls" class="hidden mt-6 bg-white rounded-lg shadow-md p-6">
+                    <div class="flex flex-col md:flex-row md:justify-between md:items-center">
+                        <div>
+                            <h2 class="text-2xl font-bold mb-2 text-gray-800">Control del Juego</h2>
+                            <p class="text-gray-600">Gestiona el escape room en curso</p>
+                        </div>
+                        
+                        <div class="mt-4 md:mt-0 flex space-x-4">
+                            <button id="pause-game-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded">
+                                <i class="fas fa-pause mr-2"></i> Pausar
+                            </button>
+                            <button id="end-game-btn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">
+                                <i class="fas fa-stop mr-2"></i> Finalizar
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6">
+                        <h3 class="text-lg font-semibold mb-2 text-gray-700">Enviar pista a todos los equipos</h3>
+                        <div class="flex">
+                            <input id="global-hint-text" type="text" placeholder="Escribe una pista para todos..." class="flex-grow p-2 border rounded-l">
+                            <button id="send-global-hint" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-r">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Player Game Screen -->
+        <div id="player-screen" class="hidden min-h-screen flex flex-col">
+            <!-- Player Top Bar -->
+            <div class="bg-blue-800 text-white shadow-md">
+                <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+                    <div>
+                        <h1 id="player-team-name" class="title-font text-xl">Equipo</h1>
+                    </div>
+                    <div class="flex items-center">
+                        <span id="player-game-timer" class="px-3 py-1 rounded bg-blue-900 text-white font-mono">
+                            00:00:00
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Notification area -->
+            <div id="notification-area" class="hidden bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 relative">
+                <button id="close-notification" class="absolute right-2 top-2 text-yellow-700 hover:text-yellow-900">
+                    <i class="fas fa-times"></i>
+                </button>
+                <p id="notification-message"></p>
+            </div>
+            
+            <!-- Game Content -->
+            <div class="flex-grow container mx-auto px-4 py-6">
+                <!-- Game Introduction -->
+                <div id="game-intro" class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <h2 class="text-2xl font-bold mb-4 text-center title-font text-red-800">La Casa Rural Misteriosa</h2>
+                    <p class="mb-4">Bienvenidos a esta misteriosa casa rural. Lo que parecía ser una escapada tranquila se ha convertido en un enigma que debéis resolver. Parece que un antiguo secreto se esconde entre estas paredes...</p>
+                    <p class="mb-4">Tendréis que resolver 5 pruebas para descubrir el misterio antes de que se agote el tiempo. Cada prueba os dará una pista para resolver el enigma final.</p>
+                    <p class="font-bold">¿Estáis preparados para comenzar?</p>
+                    <div class="mt-6 text-center">
+                        <button id="start-adventure-btn" class="bg-red-700 hover:bg-red-800 text-white px-6 py-3 rounded-lg font-bold">
+                            ¡Comenzar la aventura!
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Game Progress -->
+                <div id="game-progress" class="hidden mb-6">
+                    <div class="bg-white rounded-lg shadow-md p-4">
+                        <h3 class="text-lg font-semibold mb-2">Progreso</h3>
+                        <div class="w-full bg-gray-200 rounded-full h-4">
+                            <div id="progress-bar" class="bg-blue-600 h-4 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <div class="mt-2 flex justify-between text-sm text-gray-600">
+                            <span>Prueba 1</span>
+                            <span>Prueba 2</span>
+                            <span>Prueba 3</span>
+                            <span>Prueba 4</span>
+                            <span>Prueba 5</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Hints Section -->
+                <div id="hints-section" class="hidden mb-6">
+                    <div class="bg-white rounded-lg shadow-md p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="text-lg font-semibold">Pistas recibidas <span id="hint-count" class="bg-red-600 text-white text-xs px-2 py-1 rounded-full ml-2">0</span></h3>
+                            <button id="toggle-hints-btn" class="text-blue-600 hover:text-blue-800">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                        </div>
+                        <div id="hints-container" class="hidden space-y-2 mt-2 max-h-40 overflow-y-auto">
+                            <!-- Hints will be added here -->
+                            <p class="text-gray-600 italic text-sm">No hay pistas disponibles todavía...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Current Challenge Container -->
+                <div id="challenge-container" class="hidden">
+                    <!-- Challenge content will be inserted here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Game End Screen -->
+        <div id="game-end" class="hidden min-h-screen flex items-center justify-center bg-gray-900 p-4">
+            <div class="max-w-2xl w-full bg-white rounded-lg shadow-2xl overflow-hidden">
+                <div class="p-6 bg-red-800 text-white">
+                    <h2 class="title-font text-3xl text-center">¡Fin del juego!</h2>
+                </div>
+                <div class="p-6">
+                    <div id="end-game-message" class="mb-6 text-center text-xl font-bold">
+                        <!-- End game message will be displayed here -->
+                    </div>
+                    
+                    <div id="final-rankings" class="mb-6">
+                        <h3 class="font-bold text-lg mb-3">Clasificación final:</h3>
+                        <div id="rankings-list" class="space-y-2">
+                            <!-- Rankings will be displayed here -->
+                        </div>
+                    </div>
+                    
+                    <div class="mt-8 text-center">
+                        <button id="return-to-start-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg">
+                            Volver al inicio
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        const state = {
+            gameCode: null,
+            isGameStarted: false,
+            isGamePaused: false,
+            gameStartTime: null,
+            gameDuration: 5400, // 90 minutes in seconds
+            timeRemaining: 5400,
+            teams: {},
+            currentTeam: null,
+            challenges: [
+                {
+                    id: 'cipher',
+                    title: 'Prueba 1: El Mensaje Cifrado',
+                    description: 'Habéis encontrado un extraño mensaje cifrado. Utilizad la clave para descifrarlo y encontrar el código oculto.',
+                    solution: '3729',
+                    hints: [
+                        'Observad con atención la tabla de cifrado proporcionada',
+                        'Cada letra del mensaje se corresponde con un número según la tabla',
+                        'El código está formado por 4 dígitos que aparecerán en el texto una vez descifrado'
+                    ]
+                },
+                {
+                    id: 'puzzle',
+                    title: 'Prueba 2: El Rompecabezas Visual',
+                    description: 'Las piezas de este antiguo rompecabezas están desordenadas. Resolved el puzle para revelar una imagen que contiene la siguiente clave.',
+                    solution: 'LLAVE',
+                    hints: [
+                        'Fijaos en los bordes de cada pieza para encontrar coincidencias',
+                        'La imagen final muestra un objeto y una palabra clave',
+                        'Todas las letras deben estar en MAYÚSCULAS'
+                    ]
+                },
+                {
+                    id: 'audio',
+                    title: 'Prueba 3: El Acertijo Sonoro',
+                    description: 'Estos sonidos ocultan un mensaje en clave Morse. Descifradlo para continuar.',
+                    solution: '5173',
+                    hints: [
+                        'Prestad atención a la duración de cada sonido: corto (punto) o largo (raya)',
+                        'Utilizad la tabla de código Morse proporcionada para traducir',
+                        'El mensaje descifrado os llevará a un código numérico de 4 dígitos'
+                    ]
+                },
+                {
+                    id: 'decision',
+                    title: 'Prueba 4: El Laberinto de Decisiones',
+                    description: 'Habéis encontrado un mapa de la casa con varias habitaciones marcadas. Cada elección os llevará por un camino diferente.',
+                    solution: 'SOTANO',
+                    hints: [
+                        'Las pistas de las pruebas anteriores os ayudarán a elegir el camino correcto',
+                        'Si os equivocáis, podéis volver atrás y probar otro camino',
+                        'La palabra clave es el nombre de un lugar de la casa (sin acentos)'
+                    ]
+                },
+                {
+                    id: 'final',
+                    title: 'Prueba 5: El Enigma Final',
+                    description: 'Habéis llegado al misterio final. Combinad todas las pistas recopiladas para descubrir el secreto de la casa rural.',
+                    solution: 'LIBERTAD',
+                    hints: [
+                        'Revisad todas las pistas y códigos que habéis recopilado en las pruebas anteriores',
+                        'Algunas letras de cada solución forman parte de la palabra final',
+                        'La palabra final tiene 8 letras y representa un concepto abstracto'
+                    ]
+                }
+            ]
+        };
+
+        // DOM Elements
+        const elements = {
+            loadingScreen: document.getElementById('loading-screen'),
+            loadingBar: document.getElementById('loading-bar'),
+            loadingText: document.getElementById('loading-text'),
+            loginScreen: document.getElementById('login-screen'),
+            playerBtn: document.getElementById('player-btn'),
+            adminBtn: document.getElementById('admin-btn'),
+            adminLogin: document.getElementById('admin-login'),
+            playerLogin: document.getElementById('player-login'),
+            adminPassword: document.getElementById('admin-password'),
+            adminLoginBtn: document.getElementById('admin-login-btn'),
+            adminCancelBtn: document.getElementById('admin-cancel-btn'),
+            gameCode: document.getElementById('game-code'),
+            teamName: document.getElementById('team-name'),
+            teamJoinBtn: document.getElementById('team-join-btn'),
+            playerCancelBtn: document.getElementById('player-cancel-btn'),
+            adminDashboard: document.getElementById('admin-dashboard'),
+            playerScreen: document.getElementById('player-screen'),
+            adminLogoutBtn: document.getElementById('admin-logout-btn'),
+            gameSetup: document.getElementById('game-setup'),
+            teamsConfig: document.getElementById('teams-config'),
+            addTeamBtn: document.getElementById('add-team-btn'),
+            gameDuration: document.getElementById('game-duration'),
+            gameCodeDisplay: document.getElementById('game-code-display'),
+            startGameBtn: document.getElementById('start-game-btn'),
+            teamsProgress: document.getElementById('teams-progress'),
+            gameControls: document.getElementById('game-controls'),
+            pauseGameBtn: document.getElementById('pause-game-btn'),
+            endGameBtn: document.getElementById('end-game-btn'),
+            globalHintText: document.getElementById('global-hint-text'),
+            sendGlobalHint: document.getElementById('send-global-hint'),
+            playerTeamName: document.getElementById('player-team-name'),
+            notificationArea: document.getElementById('notification-area'),
+            notificationMessage: document.getElementById('notification-message'),
+            closeNotification: document.getElementById('close-notification'),
+            gameIntro: document.getElementById('game-intro'),
+            startAdventureBtn: document.getElementById('start-adventure-btn'),
+            gameProgress: document.getElementById('game-progress'),
+            progressBar: document.getElementById('progress-bar'),
+            hintsSection: document.getElementById('hints-section'),
+            hintCount: document.getElementById('hint-count'),
+            toggleHintsBtn: document.getElementById('toggle-hints-btn'),
+            hintsContainer: document.getElementById('hints-container'),
+            challengeContainer: document.getElementById('challenge-container'),
+            adminGameTimer: document.getElementById('admin-game-timer'),
+            playerGameTimer: document.getElementById('player-game-timer'),
+            gameEnd: document.getElementById('game-end'),
+            endGameMessage: document.getElementById('end-game-message'),
+            rankingsList: document.getElementById('rankings-list'),
+            returnToStartBtn: document.getElementById('return-to-start-btn')
+        };
+
+        // Utility functions
+        function generateGameCode() {
+            return Math.floor(1000 + Math.random() * 9000).toString();
+        }
+
+        function formatTime(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function showNotification(message, duration = 5000) {
+            elements.notificationMessage.textContent = message;
+            elements.notificationArea.classList.remove('hidden');
+            
+            if (duration > 0) {
+                setTimeout(() => {
+                    elements.notificationArea.classList.add('hidden');
+                }, duration);
+            }
+        }
+
+        function updateProgressBar(teamId) {
+            const team = state.teams[teamId];
+            const progressPercentage = (team.currentChallenge / state.challenges.length) * 100;
+            elements.progressBar.style.width = `${progressPercentage}%`;
+        }
+
+        function addHint(hint) {
+            const hintElement = document.createElement('div');
+            hintElement.className = 'p-2 bg-yellow-100 rounded border-l-4 border-yellow-400';
+            
+            const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            hintElement.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <p class="text-gray-800">${hint}</p>
+                    <span class="text-xs text-gray-500">${timestamp}</span>
+                </div>
+            `;
+            
+            elements.hintsContainer.innerHTML = '';
+            elements.hintsContainer.appendChild(hintElement);
+            
+            const hintCount = parseInt(elements.hintCount.textContent) + 1;
+            elements.hintCount.textContent = hintCount;
+            
+            if (elements.hintsContainer.classList.contains('hidden')) {
+                elements.toggleHintsBtn.click();
+            }
+            
+            showNotification('¡Has recibido una nueva pista!');
+        }
+
+        // Game logic functions
+        function initGame() {
+            // Simulate loading
+            let progress = 0;
+            const loadingInterval = setInterval(() => {
+                progress += 5;
+                elements.loadingBar.style.width = `${progress}%`;
+                
+                if (progress >= 100) {
+                    clearInterval(loadingInterval);
+                    setTimeout(() => {
+                        elements.loadingScreen.classList.add('hidden');
+                        elements.loginScreen.classList.remove('hidden');
+                    }, 500);
+                }
+                
+                if (progress >= 50) {
+                    elements.loadingText.textContent = 'Preparando los enigmas...';
+                }
+                
+                if (progress >= 75) {
+                    elements.loadingText.textContent = '¡Casi listo!';
+                }
+            }, 100);
+            
+            // Generate a game code for admin
+            state.gameCode = generateGameCode();
+            elements.gameCodeDisplay.textContent = state.gameCode;
+            
+            // Set up event listeners
+            setupEventListeners();
+        }
+
+        function setupEventListeners() {
+            // Login screen buttons
+            elements.playerBtn.addEventListener('click', () => {
+                elements.adminLogin.classList.add('hidden');
+                elements.playerLogin.classList.remove('hidden');
+            });
+            
+            elements.adminBtn.addEventListener('click', () => {
+                elements.playerLogin.classList.add('hidden');
+                elements.adminLogin.classList.remove('hidden');
+            });
+            
+            elements.adminCancelBtn.addEventListener('click', () => {
+                elements.adminLogin.classList.add('hidden');
+                elements.adminPassword.value = '';
+            });
+            
+            elements.playerCancelBtn.addEventListener('click', () => {
+                elements.playerLogin.classList.add('hidden');
+                elements.gameCode.value = '';
+                elements.teamName.value = '';
+            });
+            
+            // Admin login
+            elements.adminLoginBtn.addEventListener('click', () => {
+                const password = elements.adminPassword.value;
+                if (password === 'organizador') {
+                    elements.loginScreen.classList.add('hidden');
+                    elements.adminDashboard.classList.remove('hidden');
+                } else {
+                    alert('Contraseña incorrecta');
+                }
+            });
+            
+            // Admin logout
+            elements.adminLogoutBtn.addEventListener('click', () => {
+                elements.adminDashboard.classList.add('hidden');
+                elements.loginScreen.classList.remove('hidden');
+                elements.adminPassword.value = '';
+            });
+            
+            // Team management
+            elements.addTeamBtn.addEventListener('click', addTeamInput);
+            
+            // Game setup
+            elements.startGameBtn.addEventListener('click', startGame);
+            
+            // Game controls
+            elements.pauseGameBtn.addEventListener('click', togglePauseGame);
+            elements.endGameBtn.addEventListener('click', endGame);
+            elements.sendGlobalHint.addEventListener('click', sendGlobalHint);
+            
+            // Player join
+            elements.teamJoinBtn.addEventListener('click', joinGame);
+            
+            // Player notifications
+            elements.closeNotification.addEventListener('click', () => {
+                elements.notificationArea.classList.add('hidden');
+            });
+            
+            // Player game start
+            elements.startAdventureBtn.addEventListener('click', startPlayerChallenge);
+            
+            // Hints toggle
+            elements.toggleHintsBtn.addEventListener('click', () => {
+                elements.hintsContainer.classList.toggle('hidden');
+                const icon = elements.toggleHintsBtn.querySelector('i');
+                icon.classList.toggle('fa-chevron-down');
+                icon.classList.toggle('fa-chevron-up');
+            });
+            
+            // Return to start
+            elements.returnToStartBtn.addEventListener('click', resetGame);
+            
+            // Admin dashboard - remove team buttons
+            document.querySelectorAll('.remove-team').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    if (document.querySelectorAll('.team-name-input').length > 2) {
+                        this.parentElement.remove();
+                    } else {
+                        alert('Debes tener al menos 2 equipos');
+                    }
+                });
+            });
+        }
+
+        function addTeamInput() {
+            const teamInputs = document.querySelectorAll('.team-name-input');
+            if (teamInputs.length >= 6) {
+                alert('Máximo 6 equipos permitidos');
+                return;
+            }
+            
+            const teamDiv = document.createElement('div');
+            teamDiv.className = 'flex items-center';
+            teamDiv.innerHTML = `
+                <input type="text" placeholder="Nombre del equipo ${teamInputs.length + 1}" class="team-name-input flex-grow p-2 border rounded mr-2">
+                <button class="remove-team text-red-500 hover:text-red-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            elements.teamsConfig.appendChild(teamDiv);
+            
+            teamDiv.querySelector('.remove-team').addEventListener('click', function() {
+                if (document.querySelectorAll('.team-name-input').length > 2) {
+                    this.parentElement.remove();
+                } else {
+                    alert('Debes tener al menos 2 equipos');
+                }
+            });
+        }
+
+        function startGame() {
+            // Get team names
+            const teamInputs = document.querySelectorAll('.team-name-input');
+            let validTeams = 0;
+            
+            state.teams = {};
+            
+            teamInputs.forEach((input, index) => {
+                const teamName = input.value.trim();
+                if (teamName) {
+                    validTeams++;
+                    const teamId = `team-${index}`;
+                    state.teams[teamId] = {
+                        id: teamId,
+                        name: teamName,
+                        joined: false,
+                        currentChallenge: 0,
+                        completedChallenges: [],
+                        startTime: null,
+                        endTime: null,
+                        hints: []
+                    };
+                }
+            });
+            
+            if (validTeams < 2) {
+                alert('Debes configurar al menos 2 equipos con nombres válidos');
+                return;
+            }
+            
+            // Set game duration
+            state.gameDuration = parseInt(elements.gameDuration.value);
+            state.timeRemaining = state.gameDuration;
+            
+            // Update UI
+            elements.gameSetup.classList.add('hidden');
+            elements.teamsProgress.classList.remove('hidden');
+            elements.gameControls.classList.remove('hidden');
+            
+            // Generate team progress cards
+            generateTeamCards();
+            
+            // Start timer
+            state.gameStartTime = Date.now();
+            state.isGameStarted = true;
+            startTimer();
+            
+            // Update button text
+            elements.pauseGameBtn.innerHTML = '<i class="fas fa-pause mr-2"></i> Pausar';
+        }
+
+        function generateTeamCards() {
+            elements.teamsProgress.innerHTML = '';
+            
+            Object.values(state.teams).forEach(team => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-lg shadow-md overflow-hidden';
+                card.id = `team-card-${team.id}`;
+                
+                card.innerHTML = `
+                    <div class="p-4 bg-blue-700 text-white">
+                        <h3 class="font-bold text-lg">${team.name}</h3>
+                        <div class="text-sm">
+                            <span class="team-status">${team.joined ? 'Conectado' : 'Esperando...'}</span>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <div class="mb-3">
+                            <div class="text-sm text-gray-500 mb-1">Progreso</div>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                <div class="team-progress bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="text-sm text-gray-500 mb-1">Prueba actual</div>
+                            <div class="team-challenge font-medium">-</div>
+                        </div>
+                        <div class="mt-4">
+                            <div class="flex justify-between items-center">
+                                <button class="send-hint-btn bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm">
+                                    <i class="fas fa-lightbulb mr-1"></i> Enviar pista
+                                </button>
+                                <span class="team-time text-sm font-mono">00:00:00</span>
+                            </div>
+                            <div class="send-hint-form hidden mt-2">
+                                <div class="flex">
+                                    <input type="text" placeholder="Escribe una pista..." class="hint-text flex-grow p-1 text-sm border rounded-l">
+                                    <button class="confirm-hint-btn bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded-r text-sm">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                elements.teamsProgress.appendChild(card);
+                
+                // Add event listeners for hint buttons
+                const sendHintBtn = card.querySelector('.send-hint-btn');
+                const sendHintForm = card.querySelector('.send-hint-form');
+                const confirmHintBtn = card.querySelector('.confirm-hint-btn');
+                const hintText = card.querySelector('.hint-text');
+                
+                sendHintBtn.addEventListener('click', () => {
+                    sendHintForm.classList.toggle('hidden');
+                    if (!sendHintForm.classList.contains('hidden')) {
+                        hintText.focus();
+                    }
+                });
+                
+                confirmHintBtn.addEventListener('click', () => {
+                    const hint = hintText.value.trim();
+                    if (hint) {
+                        sendHintToTeam(team.id, hint);
+                        hintText.value = '';
+                        sendHintForm.classList.add('hidden');
+                    }
+                });
+            });
+        }
+
+        function updateTeamCard(teamId) {
+            const team = state.teams[teamId];
+            if (!team) return;
+            
+            const card = document.getElementById(`team-card-${teamId}`);
+            if (!card) return;
+            
+            const statusEl = card.querySelector('.team-status');
+            const progressEl = card.querySelector('.team-progress');
+            const challengeEl = card.querySelector('.team-challenge');
+            const timeEl = card.querySelector('.team-time');
+            
+            // Update status
+            statusEl.textContent = team.joined ? 'Conectado' : 'Esperando...';
+            statusEl.className = team.joined ? 'bg-green-500 text-white px-2 py-0.5 rounded text-xs' : 'bg-gray-500 text-white px-2 py-0.5 rounded text-xs';
+            
+            // Update progress
+            const progress = (team.currentChallenge / state.challenges.length) * 100;
+            progressEl.style.width = `${progress}%`;
+            
+            // Update current challenge
+            if (team.currentChallenge === 0) {
+                challengeEl.textContent = 'No iniciado';
+            } else if (team.currentChallenge > state.challenges.length) {
+                challengeEl.textContent = 'Completado';
+                card.querySelector('.send-hint-btn').disabled = true;
+            } else {
+                challengeEl.textContent = `Prueba ${team.currentChallenge}: ${state.challenges[team.currentChallenge - 1].title.split(':')[1].trim()}`;
+            }
+            
+            // Update time
+            if (team.startTime && !team.endTime) {
+                const elapsedTime = Math.floor((Date.now() - team.startTime) / 1000);
+                timeEl.textContent = formatTime(elapsedTime);
+            } else if (team.endTime) {
+                const totalTime = Math.floor((team.endTime - team.startTime) / 1000);
+                timeEl.textContent = formatTime(totalTime);
+            }
+        }
+
+        function joinGame() {
+            const enteredCode = elements.gameCode.value.trim();
+            const teamName = elements.teamName.value.trim();
+            
+            if (!enteredCode || !teamName) {
+                alert('Por favor, introduce el código del juego y el nombre de tu equipo');
+                return;
+            }
+            
+            if (enteredCode !== state.gameCode) {
+                alert('Código de juego incorrecto');
+                return;
+            }
+            
+            // Find team by name
+            let foundTeam = null;
+            for (const teamId in state.teams) {
+                if (state.teams[teamId].name.toLowerCase() === teamName.toLowerCase()) {
+                    foundTeam = state.teams[teamId];
+                    break;
+                }
+            }
+            
+            if (!foundTeam) {
+                alert('Nombre de equipo no encontrado. Contacta con el organizador.');
+                return;
+            }
+            
+            if (foundTeam.joined) {
+                alert('Este equipo ya se ha unido al juego desde otro dispositivo.');
+                return;
+            }
+            
+            // Join the game
+            foundTeam.joined = true;
+            foundTeam.startTime = Date.now();
+            state.currentTeam = foundTeam.id;
+            
+            // Update UI
+            elements.loginScreen.classList.add('hidden');
+            elements.playerScreen.classList.remove('hidden');
+            elements.playerTeamName.textContent = foundTeam.name;
+            
+            // Update team card in admin view
+            updateTeamCard(foundTeam.id);
+            
+            // Start player timer
+            updatePlayerTimer();
+        }
+
+        function startPlayerChallenge() {
+            elements.gameIntro.classList.add('hidden');
+            elements.gameProgress.classList.remove('hidden');
+            elements.hintsSection.classList.remove('hidden');
+            elements.challengeContainer.classList.remove('hidden');
+            
+            const team = state.teams[state.currentTeam];
+            team.currentChallenge = 1;
+            
+            // Update team card in admin view
+            updateTeamCard(state.currentTeam);
+            
+            // Show first challenge
+            loadChallenge(0);
+        }
+
+        function loadChallenge(challengeIndex) {
+            if (challengeIndex >= state.challenges.length) {
+                completeGame();
+                return;
+            }
+            
+            const challenge = state.challenges[challengeIndex];
+            
+            // Update progress bar
+            updateProgressBar(state.currentTeam);
+            
+            // Create challenge content
+            elements.challengeContainer.innerHTML = `
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div class="p-4 bg-blue-700 text-white">
+                        <h2 class="text-xl font-bold">${challenge.title}</h2>
+                    </div>
+                    <div class="p-6">
+                        <p class="mb-6">${challenge.description}</p>
+                        
+                        <div class="challenge-content mb-6">
+                            ${getChallengeContent(challenge.id)}
+                        </div>
+                        
+                        <div class="mt-6">
+                            <h3 class="font-bold mb-2">Introduce la solución:</h3>
+                            <div class="flex">
+                                <input type="text" id="solution-input" class="flex-grow p-2 border rounded-l" placeholder="Solución...">
+                                <button id="submit-solution" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-r">
+                                    Comprobar
+                                </button>
+                            </div>
+                            <p id="solution-feedback" class="mt-2 text-red-500 hidden">Solución incorrecta. Inténtalo de nuevo.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Add event listeners for the challenge
+            setupChallengeListeners(challenge);
+        }
+
+        function getChallengeContent(challengeId) {
+            switch (challengeId) {
+                case 'cipher':
+                    return `
+                        <div class="bg-gray-100 p-4 rounded-lg mb-4">
+                            <h3 class="font-bold mb-2">Mensaje cifrado:</h3>
+                            <p class="font-mono text-lg">19-8 13-15-14-19-1-10-5 9-14-3-12-21-25-5 5-12 3-15-4-9-7-15 3-21-1-20-18-15 20-18-5-19 19-9-5-20-5 4-15-19 14-21-5-22-5</p>
+                        </div>
+                        
+                        <div class="bg-gray-100 p-4 rounded-lg">
+                            <h3 class="font-bold mb-2">Tabla de cifrado:</h3>
+                            <table class="cipher-table w-full">
+                                <tr>
+                                    <td>A=1</td>
+                                    <td>B=2</td>
+                                    <td>C=3</td>
+                                    <td>D=4</td>
+                                    <td>E=5</td>
+                                </tr>
+                                <tr>
+                                    <td>F=6</td>
+                                    <td>G=7</td>
+                                    <td>H=8</td>
+                                    <td>I=9</td>
+                                    <td>J=10</td>
+                                </tr>
+                                <tr>
+                                    <td>K=11</td>
+                                    <td>L=12</td>
+                                    <td>M=13</td>
+                                    <td>N=14</td>
+                                    <td>O=15</td>
+                                </tr>
+                                <tr>
+                                    <td>P=16</td>
+                                    <td>Q=17</td>
+                                    <td>R=18</td>
+                                    <td>S=19</td>
+                                    <td>T=20</td>
+                                </tr>
+                                <tr>
+                                    <td>U=21</td>
+                                    <td>V=22</td>
+                                    <td>W=23</td>
+                                    <td>X=24</td>
+                                    <td>Y=25</td>
+                                </tr>
+                                <tr>
+                                    <td>Z=26</td>
+                                    <td>-=0</td>
+                                    <td colspan="3"></td>
+                                </tr>
+                            </table>
+                        </div>
+                    `;
+                    
+                case 'puzzle':
+                    return `
+                        <div class="p-4 bg-gray-100 rounded-lg">
+                            <h3 class="font-bold mb-3">Reconstruye la imagen:</h3>
+                            <div id="puzzle-grid" class="grid grid-cols-3 gap-1 max-w-xs mx-auto">
+                                <div class="puzzle-piece bg-blue-200 h-24 flex items-center justify-center" data-position="6">6</div>
+                                <div class="puzzle-piece bg-blue-200 h-24 flex items-center justify-center" data-position="2">2</div>
+                                <div class="puzzle-piece bg-blue-200 h-24 flex items-center justify-center" data-position="4">4</div>
+                                <div class="puzzle-piece bg-blue-200 h-24 flex items-center justify-center" data-position="9">9</div>
+                                <div class="puzzle-piece bg-blue-200 h-24 flex items-center justify-center" data-position="1">1</div>
+                                <div class="puzzle-piece bg-blue-200 h-24 flex items-center justify-center" data-position="8">8</div>
+                                <div class="puzzle-piece bg-blue-200 h-24 flex items-center justify-center" data-position="7">7</div>
+                                <div class="puzzle-piece bg-blue-200 h-24 flex items-center justify-center" data-position="5">5</div>
+                                <div class="puzzle-piece bg-blue-200 h-24 flex items-center justify-center" data-position="3">3</div>
+                            </div>
+                            <div class="mt-4 text-center">
+                                <button id="shuffle-puzzle" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                                    Mezclar piezas
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mt-4 bg-yellow-50 p-3 rounded-lg">
+                            <p class="text-sm"><i class="fas fa-info-circle text-yellow-500 mr-1"></i> Haz clic en dos piezas consecutivas para intercambiarlas. Cuando resuelvas el puzzle, verás una imagen que contiene la clave.</p>
+                        </div>
+                    `;
+                    
+                case 'audio':
+                    return `
+                        <div class="bg-gray-100 p-4 rounded-lg mb-4">
+                            <h3 class="font-bold mb-2">Secuencia de sonidos:</h3>
+                            <div class="audio-player">
+                                <div class="progress-container" id="audio-progress">
+                                    <div class="progress-bar" id="audio-progress-bar"></div>
+                                </div>
+                                <div class="flex justify-between mt-2">
+                                    <button id="play-audio" class="bg-blue-500 hover:bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                    <span id="audio-time" class="font-mono">00:00 / 00:00</span>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <h3 class="font-bold mb-2">Tabla de código Morse:</h3>
+                                <div class="grid grid-cols-5 gap-2 text-center">
+                                    <div class="p-1 bg-gray-200 rounded">
+                                        <div>A</div>
+                                        <div class="flex justify-center">
+                                            <span class="morse-dot"></span>
+                                            <span class="morse-dash"></span>
+                                        </div>
+                                    </div>
+                                    <div class="p-1 bg-gray-200 rounded">
+                                        <div>B</div>
+                                        <div class="flex justify-center">
+                                            <span class="morse-dash"></span>
+                                            <span class="morse-dot"></span>
+                                            <span class="morse-dot"></span>
+                                            <span class="morse-dot"></span>
+                                        </div>
+                                    </div>
+                                    <div class="p-1 bg-gray-200 rounded">
+                                        <div>C</div>
+                                        <div class="flex justify-center">
+                                            <span class="morse-dash"></span>
+                                            <span class="morse-dot"></span>
+                                            <span class="morse-dash"></span>
+                                            <span class="morse-dot"></span>
+                                        </div>
+                                    </div>
+                                    <div class="p-1 bg-gray-200 rounded">
+                                        <div>D</div>
+                                        <div class="flex justify-center">
+                                            <span class="morse-dash"></span>
+                                            <span class="morse-dot"></span>
+                                            <span class="morse-dot"></span>
+                                        </div>
+                                    </div>
+                                    <div class="p-1 bg-gray-200 rounded">
+                                        <div>E</div>
+                                        <div class="flex justify-center">
+                                            <span class="morse-dot"></span>
+                                        </div>
+                                    </div>
+                                    <div class="p-1 bg-gray-200 rounded">
+                                        <div>1</div>
+                                        <div class="flex justify-center">
+                                            <span class="morse-dot"></span>
+                                            <span class="morse-dash"></span>
+                                            <span class="morse-dash"></span>
+                                            <span class="morse-dash"></span>
+                                            <span class="morse-dash"></span>
+                                        </div>
+                                    </div>
+                                    <div class="p-1 bg-gray-200 rounded">
+                                        <div>2</div>
+                                        <div class="flex justify-center">
+                                            <span class="morse-dot"></span>
+                                            <span class="morse-dot"></span>
+                                            <span class="morse-dash"></span>
+                                            <span class="morse-dash"></span>
+                                            <span class="morse-dash"></span>
+                                        </div>
+                                    </div>
+                                    <div class="p-1 bg-gray-200 rounded">
+                                        <div>3</div>
+                                        <div class="flex justify-center">
+                                            <span class="morse-dot"></span>
+                                            <span class="morse-dot"></span>
+                                            <span class="morse-dot"></span>
+                                            <span class="morse-dash"></span>
+                                            <span class="morse-dash"></span>
+                                        </div>
+                                    </div>
+                                    <div class="p-1 bg-gray-200 rounded">
+                                        <div>4</div>
+                                        <div class="flex justify-center">
+                                            <span class="morse-dot"></span>
+                                            <span class="morse-dot"></span>
+                                            <span class="morse-dot"></span>
+                                            <span class="morse-dot"></span>
+                                            <span class="morse-dash"></span>
+                                        </div>
+                                    </div>
+                                    <div class="p-1 bg-gray-200 rounded">
+                                        <div>5</div>
+                                        <div class="flex justify-center">
+                                            <span class="morse-dot"></span>
+                                            <span class="morse-dot"></span>
+                                            <span class="morse-dot"></span>
+                                            <span class="morse-dot"></span>
+                                            <span class="morse-dot"></span>
+                                        </div>
+                                    </div>
+                                    <div class="p-1 bg-gray-200 rounded">
+                                        <div>6</div>
+                                        <div class="flex justify-center">
+                                            <span class="morse-dash"></span>
+                                            <span class="morse-dot"></span>
+                                            <span class="morse-dot"></span>
+                                            <span class="morse-dot"></span>
+                                            <span class="morse-dot"></span>
+                                        </div>
+                                    </div>
+                                    <div class="p-1 bg-gray-200 rounded">
+                                        <div>7</div>
+                                        <div class="flex justify-center">
+                                            <span class="morse-dash"></span>
+                                            <span class="morse-dash"></span>
+                                            <span class="morse-dot"></span>
+                                            <span class="morse-dot"></span>
+                                            <span class="morse-dot"></span>
+                                        </div>
+                                    </div>
+                                    <div class="p-1 bg-gray-200 rounded">
+                                        <div>8</div>
+                                        <div class="flex justify-center">
+                                            <span class="morse-dash"></span>
+                                            <span class="morse-dash"></span>
+                                            <span class="morse-dash"></span>
+                                            <span class="morse-dot"></span>
+                                            <span class="morse-dot"></span>
+                                        </div>
+                                    </div>
+                                    <div class="p-1 bg-gray-200 rounded">
+                                        <div>9</div>
+                                        <div class="flex justify-center">
+                                            <span class="morse-dash"></span>
+                                            <span class="morse-dash"></span>
+                                            <span class="morse-dash"></span>
+                                            <span class="morse-dash"></span>
+                                            <span class="morse-dot"></span>
+                                        </div>
+                                    </div>
+                                    <div class="p-1 bg-gray-200 rounded">
+                                        <div>0</div>
+                                        <div class="flex justify-center">
+                                            <span class="morse-dash"></span>
+                                            <span class="morse-dash"></span>
+                                            <span class="morse-dash"></span>
+                                            <span class="morse-dash"></span>
+                                            <span class="morse-dash"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                case 'decision':
+                    return `
+                        <div class="bg-gray-100 p-4 rounded-lg mb-4">
+                            <h3 class="font-bold mb-3">Mapa de la casa rural:</h3>
+                            <div id="map-container" class="border-2 border-gray-400 p-2 rounded">
+                                <div id="current-location" class="bg-blue-100 p-3 mb-3 border-l-4 border-blue-500">
+                                    <p class="font-semibold">Ubicación actual: <span id="location-name">Recibidor</span></p>
+                                    <p id="location-description">Os encontráis en el recibidor de la casa rural. Hay varias puertas que llevan a diferentes estancias.</p>
+                                </div>
+                                
+                                <div id="location-options" class="flex flex-col space-y-2">
+                                    <button class="location-option bg-white hover:bg-gray-100 py-2 px-4 border rounded text-left" data-destination="salon">
+                                        <i class="fas fa-door-open mr-2 text-brown-500"></i> Ir al Salón
+                                    </button>
+                                    <button class="location-option bg-white hover:bg-gray-100 py-2 px-4 border rounded text-left" data-destination="cocina">
+                                        <i class="fas fa-door-open mr-2 text-brown-500"></i> Ir a la Cocina
+                                    </button>
+                                    <button class="location-option bg-white hover:bg-gray-100 py-2 px-4 border rounded text-left" data-destination="escaleras">
+                                        <i class="fas fa-door-open mr-2 text-brown-500"></i> Subir las Escaleras
+                                    </button>
+                                    <button class="location-option bg-white hover:bg-gray-100 py-2 px-4 border rounded text-left" data-destination="jardin">
+                                        <i class="fas fa-door-open mr-2 text-brown-500"></i> Salir al Jardín
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4 bg-yellow-50 p-3 rounded-lg">
+                            <p class="text-sm"><i class="fas fa-info-circle text-yellow-500 mr-1"></i> Explorad la casa rural para encontrar pistas. Las soluciones de las pruebas anteriores os indicarán el camino correcto.</p>
+                        </div>
+                    `;
+                    
+                case 'final':
+                    return `
+                        <div class="bg-gray-100 p-4 rounded-lg mb-4">
+                            <h3 class="font-bold mb-2">El enigma final:</h3>
+                            <p class="mb-4">Habéis llegado al misterio final de la casa rural. Ante vosotros encontráis un antiguo libro con la siguiente inscripción:</p>
+                            
+                            <div class="bg-amber-50 p-3 border border-amber-200 rounded mb-4 font-serif">
+                                <p class="italic text-center">"Las claves del pasado revelan el valor más preciado. Unid vuestros hallazgos anteriores para descubrir el secreto."</p>
+                            </div>
+                            
+                            <div class="mt-4 space-y-3">
+                                <div class="p-2 bg-white rounded border">
+                                    <p class="font-semibold">Prueba 1: El Mensaje Cifrado</p>
+                                    <p>Clave obtenida: 3729</p>
+                                    <p class="mt-1 text-sm text-gray-600">La <span class="hidden-clue revealed">L</span> en el mensaje estaba marcada.</p>
+                                </div>
+                                
+                                <div class="p-2 bg-white rounded border">
+                                    <p class="font-semibold">Prueba 2: El Rompecabezas Visual</p>
+                                    <p>Clave obtenida: LLAVE</p>
+                                    <p class="mt-1 text-sm text-gray-600">La <span class="hidden-clue revealed">I</span> estaba iluminada.</p>
+                                </div>
+                                
+                                <div class="p-2 bg-white rounded border">
+                                    <p class="font-semibold">Prueba 3: El Acertijo Sonoro</p>
+                                    <p>Clave obtenida: 5173</p>
+                                    <p class="mt-1 text-sm text-gray-600">El sonido de fondo contenía la letra <span class="hidden-clue revealed">B</span>.</p>
+                                </div>
+                                
+                                <div class="p-2 bg-white rounded border">
+                                    <p class="font-semibold">Prueba 4: El Laberinto de Decisiones</p>
+                                    <p>Clave obtenida: SOTANO</p>
+                                    <p class="mt-1 text-sm text-gray-600">En la pared estaba tallada la letra <span class="hidden-clue revealed">E</span>.</p>
+                                </div>
+                                
+                                <div class="p-2 bg-white rounded border">
+                                    <p class="font-semibold">Resumen del enigma</p>
+                                    <p class="mt-1">Las letras destacadas forman la palabra clave que representa el secreto de la casa rural.</p>
+                                    <div class="mt-2 grid grid-cols-8 gap-1">
+                                        <div class="w-8 h-8 bg-blue-100 flex items-center justify-center font-bold rounded">L</div>
+                                        <div class="w-8 h-8 bg-blue-100 flex items-center justify-center font-bold rounded">I</div>
+                                        <div class="w-8 h-8 bg-blue-100 flex items-center justify-center font-bold rounded">B</div>
+                                        <div class="w-8 h-8 bg-blue-100 flex items-center justify-center font-bold rounded">E</div>
+                                        <div class="w-8 h-8 bg-blue-100 flex items-center justify-center font-bold rounded">R</div>
+                                        <div class="w-8 h-8 bg-blue-100 flex items-center justify-center font-bold rounded">T</div>
+                                        <div class="w-8 h-8 bg-blue-100 flex items-center justify-center font-bold rounded">A</div>
+                                        <div class="w-8 h-8 bg-blue-100 flex items-center justify-center font-bold rounded">D</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                default:
+                    return '<p>Contenido no disponible</p>';
+            }
+        }
+
+        function setupChallengeListeners(challenge) {
+            const solutionInput = document.getElementById('solution-input');
+            const submitButton = document.getElementById('submit-solution');
+            const feedback = document.getElementById('solution-feedback');
+            
+            // Set up solution check
+            submitButton.addEventListener('click', () => {
+                const userSolution = solutionInput.value.trim().toUpperCase();
+                
+                if (userSolution === challenge.solution) {
+                    // Correct solution
+                    const team = state.teams[state.currentTeam];
+                    team.completedChallenges.push(challenge.id);
+                    team.currentChallenge++;
+                    
+                    // Update team card in admin view
+                    updateTeamCard(state.currentTeam);
+                    
+                    // Show success message
+                    showNotification('¡Solución correcta! Avanzando a la siguiente prueba...', 2000);
+                    
+                    // Load next challenge after a short delay
+                    setTimeout(() => {
+                        loadChallenge(team.currentChallenge - 1);
+                    }, 2000);
+                } else {
+                    // Wrong solution
+                    feedback.classList.remove('hidden');
+                    solutionInput.classList.add('border-red-500');
+                    
+                    // Hide feedback after 3 seconds
+                    setTimeout(() => {
+                        feedback.classList.add('hidden');
+                        solutionInput.classList.remove('border-red-500');
+                    }, 3000);
+                }
+            });
+            
+            // Add challenge-specific listeners
+            if (challenge.id === 'puzzle') {
+                setupPuzzleListeners();
+            } else if (challenge.id === 'audio') {
+                setupAudioListeners();
+            } else if (challenge.id === 'decision') {
+                setupDecisionListeners();
+            } else if (challenge.id === 'final') {
+                setupFinalListeners();
+            }
+        }
+
+        function setupPuzzleListeners() {
+            const puzzlePieces = document.querySelectorAll('.puzzle-piece');
+            const shuffleButton = document.getElementById('shuffle-puzzle');
+            let selectedPiece = null;
+            
+            // Set up piece selection
+            puzzlePieces.forEach(piece => {
+                piece.addEventListener('click', () => {
+                    if (selectedPiece === null) {
+                        selectedPiece = piece;
+                        piece.classList.add('ring-2', 'ring-blue-500');
+                    } else {
+                        // Swap pieces
+                        const tempPosition = selectedPiece.dataset.position;
+                        selectedPiece.dataset.position = piece.dataset.position;
+                        piece.dataset.position = tempPosition;
+                        
+                        const tempText = selectedPiece.textContent;
+                        selectedPiece.textContent = piece.textContent;
+                        piece.textContent = tempText;
+                        
+                        // Reset selection
+                        selectedPiece.classList.remove('ring-2', 'ring-blue-500');
+                        selectedPiece = null;
+                        
+                        // Check if puzzle is solved
+                        checkPuzzleSolution();
+                    }
+                });
+            });
+            
+            // Set up shuffle button
+            shuffleButton.addEventListener('click', () => {
+                // Reset selection if any
+                if (selectedPiece) {
+                    selectedPiece.classList.remove('ring-2', 'ring-blue-500');
+                    selectedPiece = null;
+                }
+                
+                const positions = Array.from(puzzlePieces).map(piece => piece.dataset.position);
+                shuffleArray(positions);
+                
+                puzzlePieces.forEach((piece, index) => {
+                    piece.dataset.position = positions[index];
+                    piece.textContent = positions[index];
+                });
+            });
+        }
+
+        function checkPuzzleSolution() {
+            const puzzlePieces = document.querySelectorAll('.puzzle-piece');
+            const isCorrect = Array.from(puzzlePieces).every((piece, index) => {
+                return parseInt(piece.dataset.position) === index + 1;
+            });
+            
+            if (isCorrect) {
+                // Show the solution image
+                const puzzleGrid = document.getElementById('puzzle-grid');
+                puzzleGrid.innerHTML = `
+                    <div class="col-span-3 bg-yellow-100 p-4 rounded-lg">
+                        <p class="font-bold text-center mb-3">¡Puzzle completado!</p>
+                        <p class="text-center">La imagen revela una antigua llave con la palabra: <span class="font-bold text-red-600">LLAVE</span></p>
+                    </div>
+                `;
+                
+                // Update solution input
+                const solutionInput = document.getElementById('solution-input');
+                solutionInput.value = 'LLAVE';
+            }
+        }
+
+        function setupAudioListeners() {
+            // Simulate audio player behavior without actual audio
+            const playButton = document.getElementById('play-audio');
+            const progressBar = document.getElementById('audio-progress-bar');
+            const audioTime = document.getElementById('audio-time');
+            const audioProgress = document.getElementById('audio-progress');
+            
+            let isPlaying = false;
+            let duration = 60; // seconds
+            let currentTime = 0;
+            let audioInterval;
+            
+            playButton.addEventListener('click', () => {
+                if (isPlaying) {
+                    // Pause audio
+                    clearInterval(audioInterval);
+                    playButton.innerHTML = '<i class="fas fa-play"></i>';
+                } else {
+                    // Play audio
+                    audioInterval = setInterval(() => {
+                        currentTime = (currentTime + 1) % (duration + 1);
+                        const progress = (currentTime / duration) * 100;
+                        progressBar.style.width = `${progress}%`;
+                        audioTime.textContent = `${formatAudioTime(currentTime)} / ${formatAudioTime(duration)}`;
+                        
+                        if (currentTime === duration) {
+                            // Audio finished
+                            clearInterval(audioInterval);
+                            playButton.innerHTML = '<i class="fas fa-play"></i>';
+                            isPlaying = false;
+                        }
+                    }, 1000);
+                    
+                    playButton.innerHTML = '<i class="fas fa-pause"></i>';
+                }
+                
+                isPlaying = !isPlaying;
+            });
+            
+            audioProgress.addEventListener('click', (e) => {
+                const rect = audioProgress.getBoundingClientRect();
+                const clickPosition = (e.clientX - rect.left) / rect.width;
+                currentTime = Math.floor(clickPosition * duration);
+                
+                const progress = (currentTime / duration) * 100;
+                progressBar.style.width = `${progress}%`;
+                audioTime.textContent = `${formatAudioTime(currentTime)} / ${formatAudioTime(duration)}`;
+            });
+        }
+
+        function formatAudioTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function setupDecisionListeners() {
+            const locationOptions = document.querySelectorAll('.location-option');
+            const locationName = document.getElementById('location-name');
+            const locationDescription = document.getElementById('location-description');
+            
+            const locations = {
+                recibidor: {
+                    name: 'Recibidor',
+                    description: 'Os encontráis en el recibidor de la casa rural. Hay varias puertas que llevan a diferentes estancias.',
+                    options: ['salon', 'cocina', 'escaleras', 'jardin']
+                },
+                salon: {
+                    name: 'Salón',
+                    description: 'Un amplio salón con una chimenea apagada. Hay varios cuadros en las paredes y muebles antiguos.',
+                    options: ['recibidor', 'biblioteca', 'comedor']
+                },
+                cocina: {
+                    name: 'Cocina',
+                    description: 'Una cocina espaciosa con una gran mesa en el centro. La despensa parece contener algunas provisiones.',
+                    options: ['recibidor', 'despensa', 'comedor']
+                },
+                escaleras: {
+                    name: 'Escaleras',
+                    description: 'Unas escaleras de madera que crujen bajo vuestros pies. Conducen al piso superior y también parece haber una puerta debajo que podría llevar a un sótano.',
+                    options: ['recibidor', 'planta_superior', 'sotano']
+                },
+                jardin: {
+                    name: 'Jardín',
+                    description: 'Un jardín descuidado con algunas estatuas antiguas. Hay un pozo en el centro y un cobertizo al fondo.',
+                    options: ['recibidor', 'pozo', 'cobertizo']
+                },
+                biblioteca: {
+                    name: 'Biblioteca',
+                    description: 'Una pequeña biblioteca con estanterías llenas de libros polvorientos. Hay un escritorio junto a la ventana.',
+                    options: ['salon']
+                },
+                comedor: {
+                    name: 'Comedor',
+                    description: 'Un elegante comedor con una gran mesa. La vajilla está colocada como si esperaran invitados.',
+                    options: ['salon', 'cocina']
+                },
+                despensa: {
+                    name: 'Despensa',
+                    description: 'Una pequeña despensa con estantes llenos de conservas y algunos alimentos básicos.',
+                    options: ['cocina']
+                },
+                planta_superior: {
+                    name: 'Planta Superior',
+                    description: 'Un pasillo con varias puertas que conducen a diferentes habitaciones.',
+                    options: ['escaleras', 'dormitorio_principal', 'habitacion_invitados', 'estudio']
+                },
+                sotano: {
+                    name: 'Sótano',
+                    description: '¡Lo habéis encontrado! Un sótano oscuro con viejos baúles y estanterías. En la pared hay una inscripción antigua. Parece ser el lugar indicado en las pistas.',
+                    options: ['escaleras'],
+                    isTarget: true
+                },
+                pozo: {
+                    name: 'Pozo',
+                    description: 'Un pozo antiguo. Al asomaros podéis ver agua en el fondo, pero nada más interesante.',
+                    options: ['jardin']
+                },
+                cobertizo: {
+                    name: 'Cobertizo',
+                    description: 'Un cobertizo con herramientas de jardinería. No parece haber nada especial aquí.',
+                    options: ['jardin']
+                },
+                dormitorio_principal: {
+                    name: 'Dormitorio Principal',
+                    description: 'Un dormitorio elegante con una cama con dosel. Hay un tocador y un armario grande.',
+                    options: ['planta_superior']
+                },
+                habitacion_invitados: {
+                    name: 'Habitación de Invitados',
+                    description: 'Una habitación más pequeña con dos camas individuales. Hay un pequeño escritorio junto a la ventana.',
+                    options: ['planta_superior']
+                },
+                estudio: {
+                    name: 'Estudio',
+                    description: 'Un estudio con una gran mesa de trabajo. Hay planos y documentos antiguos esparcidos por la superficie.',
+                    options: ['planta_superior']
+                }
+            };
+            
+            let currentLocation = 'recibidor';
+            
+            function updateLocation(locationId) {
+                currentLocation = locationId;
+                const location = locations[locationId];
+                
+                locationName.textContent = location.name;
+                locationDescription.textContent = location.description;
+                
+                // Update available options
+                const optionsContainer = document.getElementById('location-options');
+                optionsContainer.innerHTML = '';
+                
+                location.options.forEach(optionId => {
+                    const option = locations[optionId];
+                    const button = document.createElement('button');
+                    button.className = 'location-option bg-white hover:bg-gray-100 py-2 px-4 border rounded text-left';
+                    button.dataset.destination = optionId;
+                    button.innerHTML = `<i class="fas fa-door-open mr-2 text-brown-500"></i> Ir a ${option.name}`;
+                    
+                    button.addEventListener('click', () => {
+                        updateLocation(optionId);
+                    });
+                    
+                    optionsContainer.appendChild(button);
+                });
+                
+                // Check if this is the target location
+                if (location.isTarget) {
+                    // Update solution input
+                    const solutionInput = document.getElementById('solution-input');
+                    solutionInput.value = 'SOTANO';
+                    
+                    // Add a visual cue
+                    const mapContainer = document.getElementById('map-container');
+                    const successMessage = document.createElement('div');
+                    successMessage.className = 'mt-4 p-3 bg-green-100 border-l-4 border-green-500 text-green-700';
+                    successMessage.innerHTML = `
+                        <p class="font-bold">¡Habéis encontrado el lugar correcto!</p>
+                        <p>La palabra clave es "SOTANO" - Introducidla en el campo de solución para continuar.</p>
+                    `;
+                    mapContainer.appendChild(successMessage);
+                }
+            }
+            
+            // Set up initial location options
+            locationOptions.forEach(option => {
+                option.addEventListener('click', () => {
+                    const destination = option.dataset.destination;
+                    updateLocation(destination);
+                });
+            });
+        }
+
+        function setupFinalListeners() {
+            const hiddenClues = document.querySelectorAll('.hidden-clue');
+            
+            hiddenClues.forEach(clue => {
+                clue.addEventListener('click', () => {
+                    clue.classList.add('revealed');
+                });
+            });
+        }
+
+        function sendHintToTeam(teamId, hint) {
+            const team = state.teams[teamId];
+            if (!team) return;
+            
+            team.hints.push(hint);
+            
+            // If the team is currently connected, send the hint
+            if (team.id === state.currentTeam) {
+                addHint(hint);
+            }
+        }
+
+        function sendGlobalHint() {
+            const hint = elements.globalHintText.value.trim();
+            if (!hint) return;
+            
+            // Send to all active teams
+            for (const teamId in state.teams) {
+                if (state.teams[teamId].joined && state.teams[teamId].currentChallenge > 0) {
+                    sendHintToTeam(teamId, hint);
+                }
+            }
+            
+            elements.globalHintText.value = '';
+        }
+
+        function startTimer() {
+            if (state.timerInterval) {
+                clearInterval(state.timerInterval);
+            }
+            
+            state.timerInterval = setInterval(() => {
+                if (state.isGamePaused) return;
+                
+                const elapsed = Math.floor((Date.now() - state.gameStartTime) / 1000);
+                state.timeRemaining = Math.max(0, state.gameDuration - elapsed);
+                
+                // Update admin timer
+                elements.adminGameTimer.textContent = formatTime(state.timeRemaining);
+                
+                // Update team cards
+                for (const teamId in state.teams) {
+                    updateTeamCard(teamId);
+                }
+                
+                // Check if time is up
+                if (state.timeRemaining <= 0) {
+                    endGame();
+                } else if (state.timeRemaining <= 300) {
+                    // Last 5 minutes
+                    elements.adminGameTimer.classList.add('timer-warning');
+                }
+            }, 1000);
+        }
+
+        function updatePlayerTimer() {
+            if (state.playerTimerInterval) {
+                clearInterval(state.playerTimerInterval);
+            }
+            
+            state.playerTimerInterval = setInterval(() => {
+                if (!state.isGameStarted || state.isGamePaused) return;
+                
+                elements.playerGameTimer.textContent = formatTime(state.timeRemaining);
+                
+                if (state.timeRemaining <= 300) {
+                    elements.playerGameTimer.classList.add('timer-warning');
+                }
+            }, 1000);
+        }
+
+        function togglePauseGame() {
+            state.isGamePaused = !state.isGamePaused;
+            
+            if (state.isGamePaused) {
+                elements.pauseGameBtn.innerHTML = '<i class="fas fa-play mr-2"></i> Reanudar';
+                elements.pauseGameBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
+                elements.pauseGameBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+            } else {
+                elements.pauseGameBtn.innerHTML = '<i class="fas fa-pause mr-2"></i> Pausar';
+                elements.pauseGameBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+                elements.pauseGameBtn.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
+                
+                // Update game start time to account for pause
+                const currentTime = Date.now();
+                state.gameStartTime = currentTime - (state.gameDuration - state.timeRemaining) * 1000;
+            }
+        }
+
+        function endGame() {
+            clearInterval(state.timerInterval);
+            clearInterval(state.playerTimerInterval);
+            
+            state.isGameStarted = false;
+            
+            // Record end time for teams that haven't finished
+            for (const teamId in state.teams) {
+                const team = state.teams[teamId];
+                if (team.joined && !team.endTime) {
+                    team.endTime = Date.now();
+                }
+            }
+            
+            // Calculate rankings
+            const rankings = Object.values(state.teams)
+                .filter(team => team.joined)
+                .sort((a, b) => {
+                    // Sort by challenges completed first
+                    const aChallenges = a.currentChallenge;
+                    const bChallenges = b.currentChallenge;
+                    
+                    if (aChallenges !== bChallenges) {
+                        return bChallenges - aChallenges;
+                    }
+                    
+                    // If same number of challenges, sort by time
+                    const aTime = a.endTime - a.startTime;
+                    const bTime = b.endTime - b.startTime;
+                    return aTime - bTime;
+                });
+            
+            // Display end game screen
+            showEndGameScreen(rankings);
+        }
+
+        function showEndGameScreen(rankings) {
+            // Hide other screens
+            elements.adminDashboard.classList.add('hidden');
+            elements.playerScreen.classList.add('hidden');
+            
+            // Show end game screen
+            elements.gameEnd.classList.remove('hidden');
+            
+            // Set winner message
+            const winner = rankings[0];
+            elements.endGameMessage.textContent = `El equipo ganador es: ${winner.name}`;
+            
+            // Generate rankings list
+            elements.rankingsList.innerHTML = '';
+            
+            rankings.forEach((team, index) => {
+                const rankItem = document.createElement('div');
+                rankItem.className = 'flex justify-between items-center p-2 bg-white rounded border';
+                
+                const position = index + 1;
+                const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : `${position}.`;
+                
+                const challenges = team.currentChallenge > state.challenges.length ? 
+                    'Todas las pruebas completadas' : 
+                    `${team.currentChallenge} de ${state.challenges.length} pruebas`;
+                
+                const time = formatTime(Math.floor((team.endTime - team.startTime) / 1000));
+                
+                rankItem.innerHTML = `
+                    <div class="flex items-center">
+                        <span class="text-xl mr-2">${medal}</span>
+                        <span class="font-bold">${team.name}</span>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm text-gray-600">${challenges}</div>
+                        <div class="text-sm font-mono">${time}</div>
+                    </div>
+                `;
+                
+                elements.rankingsList.appendChild(rankItem);
+            });
+        }
+
+        function completeGame() {
+            const team = state.teams[state.currentTeam];
+            team.endTime = Date.now();
+            
+            // Update team card in admin view
+            updateTeamCard(state.currentTeam);
+            
+            // Show completion message
+            elements.challengeContainer.innerHTML = `
+                <div class="bg-green-100 p-6 rounded-lg text-center">
+                    <h2 class="text-2xl font-bold mb-4">¡Enhorabuena! ¡Habéis resuelto todas las pruebas!</h2>
+                    <p class="mb-6">Habéis descubierto el secreto de la casa rural: LIBERTAD</p>
+                    <p>Esperad a que todos los equipos terminen o a que finalice el tiempo.</p>
+                </div>
+            `;
+            
+            // Check if all teams have finished
+            const allFinished = Object.values(state.teams)
+                .filter(t => t.joined)
+                .every(t => t.currentChallenge > state.challenges.length);
+            
+            if (allFinished) {
+                // End the game if all teams have finished
+                setTimeout(() => {
+                    endGame();
+                }, 3000);
+            }
+        }
+
+        function resetGame() {
+            // Reset game state
+            state.isGameStarted = false;
+            state.isGamePaused = false;
+            state.gameStartTime = null;
+            state.timeRemaining = state.gameDuration;
+            state.teams = {};
+            state.currentTeam = null;
+            
+            // Clear intervals
+            if (state.timerInterval) {
+                clearInterval(state.timerInterval);
+            }
+            if (state.playerTimerInterval) {
+                clearInterval(state.playerTimerInterval);
+            }
+            
+            // Generate new game code
+            state.gameCode = generateGameCode();
+            
+            // Reset UI
+            elements.gameEnd.classList.add('hidden');
+            elements.loginScreen.classList.remove('hidden');
+            
+            elements.adminPassword.value = '';
+            elements.gameCode.value = '';
+            elements.teamName.value = '';
+            
+            // Reset admin dashboard
+            elements.teamsProgress.classList.add('hidden');
+            elements.gameControls.classList.add('hidden');
+            elements.gameSetup.classList.remove('hidden');
+            
+            // Generate new game code
+            elements.gameCodeDisplay.textContent = state.gameCode;
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // Initialize the game
+        initGame();
+    </script>
+</body>
+</html>
